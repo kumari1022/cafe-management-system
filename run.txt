@@ -1,0 +1,18 @@
+# How to Run the Cafe Management System
+
+The project is currently ACTIVE at: http://localhost:4200
+
+## Step 1: Run the Backend
+1. Open a terminal in the `com.inn.cafe` directory.
+2. Run: `mvn spring-boot:run`
+   - The backend runs on http://localhost:8081.
+
+## Step 2: Run the Frontend
+1. Open a terminal in the `Frontend` directory.
+2. Run: `$env:NODE_OPTIONS = "--openssl-legacy-provider"; npm start`
+   - The frontend runs on http://localhost:4200.
+
+---
+Database Config:
+- Schema: cafesystem
+- Password: 22102005Kk@ (update in application.properties if changed)
