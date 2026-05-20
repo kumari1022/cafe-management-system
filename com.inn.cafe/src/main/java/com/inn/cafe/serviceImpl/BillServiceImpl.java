@@ -6,6 +6,7 @@ import com.inn.cafe.JWT.CustomerUserDetailsService;
 import com.inn.cafe.JWT.JwtFilter;
 import com.inn.cafe.POJO.Bill;
 import com.inn.cafe.POJO.Category;
+import com.inn.cafe.config.BillStorageService;
 import com.inn.cafe.constents.CafeConstants;
 import com.inn.cafe.dao.BillDao;
 import com.inn.cafe.service.BillService;
@@ -23,8 +24,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.stereotype.Service;
+import org.springframework.core.io.ClassPathResource;
 
 import java.io.*;
+import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -50,6 +55,12 @@ public class BillServiceImpl implements BillService {
     @Autowired
     EmailUtil emailUtil;
 
+    @Autowired
+    BillStorageService billStorageService;
+
+    private static final BaseColor COFFEE_PRIMARY = new BaseColor(156, 102, 68);
+    private static final BaseColor COFFEE_LIGHT = new BaseColor(237, 224, 212);
+
     @Override
     public ResponseEntity<String> generateReport(Map<String, Object> requestMap) {
         log.info("Insert generateReport");
@@ -63,21 +74,43 @@ public class BillServiceImpl implements BillService {
                     requestMap.put("uuid", filename);
                     insertBill(requestMap);
                 }
-                // print user data (name , email m contactNumber , ...)
-                String data = "Name: " + requestMap.get("name") + "\n" + "Contact Number: " + requestMap.get("contactNumber") +
-                        "\n" + "Email: " + requestMap.get("email") + "\n" + "Payment Method: " + requestMap.get("paymentMethod");
+                Path pdfPath = billStorageService.resolvePdfPath(filename);
+                String dateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a"));
+                String customerInfo = "Customer: " + requestMap.get("name") + "\n"
+                        + "Phone: " + requestMap.get("contactNumber") + "\n"
+                        + "Email: " + requestMap.get("email") + "\n"
+                        + "Payment: " + requestMap.get("paymentMethod") + "\n"
+                        + "Date: " + dateTime;
+
                 Document document = new Document();
-                PdfWriter.getInstance(document, new FileOutputStream(CafeConstants.STORE_LOCATION + "\\" + filename + ".pdf"));
+                PdfWriter.getInstance(document, new FileOutputStream(pdfPath.toFile()));
                 document.open();
                 setRectaangleInPdf(document);
 
-                // print pdf Header
-                Paragraph chunk = new Paragraph("Cafe Management System", getFont("Header"));
-                chunk.setAlignment(Element.ALIGN_CENTER);
-                document.add(chunk);
+                // Add Logo
+                try {
+                    ClassPathResource logoResource = new ClassPathResource("logo.png");
+                    if (logoResource.exists()) {
+                        Image logo = Image.getInstance(logoResource.getURL());
+                        logo.scaleToFit(80, 80);
+                        logo.setAlignment(Element.ALIGN_CENTER);
+                        document.add(logo);
+                    }
+                } catch (Exception e) {
+                    log.warn("Could not load logo for PDF", e);
+                }
 
+                Paragraph title = new Paragraph("☕ Brew Haven Cafe", getFont("Header"));
+                title.setAlignment(Element.ALIGN_CENTER);
+                title.setSpacingAfter(10);
+                document.add(title);
 
-                Paragraph paragraph = new Paragraph(data + "\n \n", getFont("Data"));
+                Paragraph address = new Paragraph("123 Coffee Street, Brew City\nInvoice #" + filename, getFont("Data"));
+                address.setAlignment(Element.ALIGN_CENTER);
+                address.setSpacingAfter(20);
+                document.add(address);
+
+                Paragraph paragraph = new Paragraph("\n" + customerInfo + "\n\n", getFont("Data"));
                 document.add(paragraph);
 
                 // Create table in pdf to print data
@@ -94,18 +127,18 @@ public class BillServiceImpl implements BillService {
 
                 document.add(table);
 
-                // print pdf Footer
-                Paragraph footer = new Paragraph("Total : " + requestMap.get("totalAmount") + "\n"
-                        + "Thank you for visiting our website.", getFont("Data"));
+                Paragraph footer = new Paragraph("\nTotal: Rs " + requestMap.get("totalAmount") + "\n\n"
+                        + "☕ Thank you for visiting Brew Haven Cafe!", getFont("Data"));
+                footer.setAlignment(Element.ALIGN_CENTER);
                 document.add(footer);
                 document.close();
                 return new ResponseEntity<>("{\"uuid\":\"" + filename + "\"}", HttpStatus.OK);
             }
             return CafeUtils.getResponeEntity("Required data not found", HttpStatus.BAD_REQUEST);
         } catch (Exception ex) {
-            ex.printStackTrace();
+            log.error("Bill generation failed", ex);
+            return CafeUtils.getResponeEntity("Could not generate bill PDF: " + ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        return CafeUtils.getResponeEntity(CafeConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @Override
@@ -127,22 +160,25 @@ public class BillServiceImpl implements BillService {
             if (!requestMap.containsKey("uuid") && validateResquestMap(requestMap)) {
                 return new ResponseEntity<>(byteArray, HttpStatus.BAD_REQUEST);
             }
-            String filepath = CafeConstants.STORE_LOCATION + "\\" + (String) requestMap.get("uuid") + ".pdf";
+            String uuid = (String) requestMap.get("uuid");
+            Path pdfPath = billStorageService.resolvePdfPath(uuid);
+            String filepath = pdfPath.toString();
 
             if (CafeUtils.isFileExist(filepath)) {
                 byteArray = getByteArray(filepath);
                 return new ResponseEntity<>(byteArray, HttpStatus.OK);
-            } else {
-                requestMap.put("isGenerate", false);
-                generateReport(requestMap);
+            }
+            requestMap.put("isGenerate", false);
+            ResponseEntity<String> generated = generateReport(requestMap);
+            if (generated.getStatusCode().is2xxSuccessful() && CafeUtils.isFileExist(filepath)) {
                 byteArray = getByteArray(filepath);
                 return new ResponseEntity<>(byteArray, HttpStatus.OK);
             }
-
+            return new ResponseEntity<>(byteArray, HttpStatus.NOT_FOUND);
         } catch (Exception ex) {
-            ex.printStackTrace();
+            log.error("PDF download failed", ex);
+            return new ResponseEntity<>(new byte[0], HttpStatus.INTERNAL_SERVER_ERROR);
         }
-        return null;
     }
 
     @Override
@@ -229,7 +265,7 @@ public class BillServiceImpl implements BillService {
                     header.setBackgroundColor(BaseColor.LIGHT_GRAY);
                     header.setBorderWidth(2);
                     header.setPhrase(new Phrase(columnTitle));
-                    header.setBackgroundColor(BaseColor.YELLOW);
+                    header.setBackgroundColor(COFFEE_LIGHT);
                     header.setHorizontalAlignment(Element.ALIGN_CENTER);
                     header.setVerticalAlignment(Element.ALIGN_CENTER);
                     table.addCell(header);
@@ -238,11 +274,18 @@ public class BillServiceImpl implements BillService {
 
     private void addRows(PdfPTable table, Map<String, Object> data) {
         log.info("Inside addRows");
-        table.addCell((String) data.get("name"));
-        table.addCell((String) data.get("category"));
-        table.addCell((String) data.get("quantity"));
-        table.addCell(Double.toString((Double) data.get("price")));
-        table.addCell(Double.toString((Double) data.get("total")));
+        table.addCell(String.valueOf(data.get("name")));
+        table.addCell(String.valueOf(data.get("category")));
+        table.addCell(String.valueOf(data.get("quantity")));
+        table.addCell(String.valueOf(toDouble(data.get("price"))));
+        table.addCell(String.valueOf(toDouble(data.get("total"))));
+    }
+
+    private double toDouble(Object value) {
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+        return Double.parseDouble(String.valueOf(value));
     }
 
     private byte[] getByteArray(String filepath) throws Exception {

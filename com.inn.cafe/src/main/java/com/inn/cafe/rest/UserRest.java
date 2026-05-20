@@ -9,24 +9,31 @@ import java.util.Map;
 
 @RequestMapping(path = "/user")
 public interface UserRest {
+
     @PostMapping(path = "/signup")
-    public ResponseEntity<String> signUp(@RequestBody(required = true) Map<String, String> requestMap);
+    ResponseEntity<String> signup(@RequestBody Map<String, String> requestMap);
 
     @PostMapping(path = "/login")
-    public ResponseEntity<String> login(@RequestBody(required = true) Map<String, String> requestMap);
-
-    @GetMapping(path = "/get")
-    public ResponseEntity<List<UserWrapper>> getAllUser();
-
-    @PostMapping(path = "/update")
-    public ResponseEntity<String> update(@RequestBody(required = true) Map<String, String> requestMap);
+    ResponseEntity<String> login(@RequestBody Map<String, String> requestMap);
 
     @GetMapping(path = "/checkToken")
-    public ResponseEntity<String> checkToken();
+    ResponseEntity<String> checkToken();
 
     @PostMapping(path = "/changePassword")
-    public ResponseEntity<String> changePassword(@RequestBody Map<String, String> requestMap);
+    ResponseEntity<String> changePassword(@RequestBody Map<String, String> requestMap);
 
     @PostMapping(path = "/forgotPassword")
-    public ResponseEntity<String> forgetPassword(@RequestBody Map<String, String> requestMap);
+    ResponseEntity<String> forgetPassword(@RequestBody Map<String, String> requestMap);
+
+    @GetMapping(path = "/staff/getAll")
+    ResponseEntity<List<UserWrapper>> getAllStaff();
+
+    @PostMapping(path = "/staff/add")
+    ResponseEntity<String> addStaff(@RequestBody Map<String, String> requestMap);
+
+    @PostMapping(path = "/staff/update")
+    ResponseEntity<String> updateStaff(@RequestBody Map<String, String> requestMap);
+
+    @PostMapping(path = "/staff/delete/{id}")
+    ResponseEntity<String> deleteStaff(@PathVariable Integer id);
 }

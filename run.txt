@@ -1,18 +1,29 @@
 # How to Run the Cafe Management System
 
-The project is currently ACTIVE at: http://localhost:4200
-
 ## Step 1: Run the Backend
 1. Open a terminal in the `com.inn.cafe` directory.
 2. Run: `mvn spring-boot:run`
-   - The backend runs on http://localhost:8081.
+   - The backend runs on http://localhost:8082
 
 ## Step 2: Run the Frontend
 1. Open a terminal in the `Frontend` directory.
-2. Run: `$env:NODE_OPTIONS = "--openssl-legacy-provider"; npm start`
-   - The frontend runs on http://localhost:4200.
+2. Run: `npm run dev`
+   - The frontend runs on http://localhost:5173
 
 ---
-Database Config:
+
+## Database Config:
 - Schema: cafesystem
 - Password: 22102005Kk@ (update in application.properties if changed)
+
+## Default Accounts:
+- Admin  → email: admin@cafe.com  | password: admin
+- Staff  → register via Admin panel
+- User   → register via /signup page
+
+## API Base URL:
+- http://localhost:8082
+
+## Image Upload Path:
+- Backend saves images to: com.inn.cafe/uploads/products/
+- Backend serves them at: http://localhost:8082/uploads/products/<filename>

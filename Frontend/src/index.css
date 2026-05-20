@@ -1,11 +1,35 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 body {
-  @apply bg-slate-50 text-slate-700 antialiased;
+  @apply bg-cafe-bg text-cafe-text font-sans antialiased;
 }
 
-.card {
-  @apply rounded-2xl bg-white shadow-sm border border-slate-100;
+.dark body {
+  @apply bg-cafe-dark-bg text-cafe-dark-text;
+}
+
+@layer components {
+  .cafe-card {
+    @apply rounded-2xl bg-cafe-card shadow-cafe border border-[#e6d5c3] dark:bg-cafe-dark-card dark:border-[#5c4033];
+  }
+
+  .cafe-btn {
+    @apply rounded-xl bg-cafe-btn text-white px-4 py-2 font-medium transition-all hover:bg-cafe-primary hover:shadow-md active:scale-[0.98];
+  }
+
+  .cafe-btn-secondary {
+    @apply rounded-xl bg-cafe-secondary text-white px-4 py-2 font-medium transition-all hover:bg-cafe-hover hover:text-cafe-text;
+  }
+
+  .cafe-input {
+    @apply w-full rounded-xl border border-[#dcc9b6] bg-white/80 px-4 py-2.5 text-cafe-text outline-none transition focus:border-cafe-primary focus:ring-2 focus:ring-cafe-hover/40 dark:bg-cafe-dark-card dark:border-[#5c4033] dark:text-cafe-dark-text;
+  }
+
+  .glass-card {
+    @apply rounded-3xl border border-white/30 bg-white/20 backdrop-blur-xl shadow-cafe-lg;
+  }
 }

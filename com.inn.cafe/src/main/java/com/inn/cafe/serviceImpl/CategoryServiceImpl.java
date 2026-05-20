@@ -43,6 +43,9 @@ public class CategoryServiceImpl implements CategoryService {
     public ResponseEntity<String> addNewCategory(Map<String, String> requestMap) {
         log.info("Inside addNewCategory{}", requestMap);
         try {
+            if (!jwtFilter.isAdmin()) {
+                return CafeUtils.getResponeEntity(CafeConstants.UNAUTHORIZED_ACCESS, HttpStatus.UNAUTHORIZED);
+            }
             if(validateCategoryMap(requestMap, false)){
                 categoryDao.save(getCategoryFromMap(requestMap , false));
                 return CafeUtils.getResponeEntity("Category Added Successfully", HttpStatus.OK);
@@ -89,6 +92,9 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     public ResponseEntity<String> update(Map<String, String> requestMap) {
         try {
+            if (!jwtFilter.isAdmin()) {
+                return CafeUtils.getResponeEntity(CafeConstants.UNAUTHORIZED_ACCESS, HttpStatus.UNAUTHORIZED);
+            }
             if (validateCategoryMap(requestMap , true)) {
 
                 Optional optional = categoryDao.findById(Integer.parseInt(requestMap.get("id")));

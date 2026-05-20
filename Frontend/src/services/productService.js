@@ -8,4 +8,5 @@ export const productService = {
   remove: (id) => api.post(`/product/delete/${id}`),
   getByCategory: (id) => api.get(`/product/getByCategory/${id}`),
   getById: (id) => api.get(`/product/getProductById/${id}`),
+  uploadImage: (formData) => api.post("/product/uploadImage", formData, { headers: { "Content-Type": "multipart/form-data" } }),
 };

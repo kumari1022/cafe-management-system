@@ -4,16 +4,16 @@ import lombok.Data;
 import org.hibernate.annotations.DynamicInsert;
 import org.hibernate.annotations.DynamicUpdate;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.io.Serializable;
 
-@NamedQuery(name = "Product.getAllProduct", query = "select new com.inn.cafe.wrapper.ProductWrapper(u.id , u.name , u.description , u.price , u.category.id , u.category.name , u.status) from Product u")
+@NamedQuery(name = "Product.getAllProduct", query = "select new com.inn.cafe.wrapper.ProductWrapper(u.id , u.name , u.description , u.price , u.category.id , u.category.name , u.status, u.imageUrl) from Product u")
 
 @NamedQuery(name = "Product.updateProductStatus" , query = "update Product u set u.status =:status where u.id =:id")
 
-@NamedQuery(name = "Product.getByCategory", query = "select new com.inn.cafe.wrapper.ProductWrapper(u.id , u.name , u.description , u.price , u.category.id , u.category.name , u.status  ) from Product u where u.category.id=:id and u.status='true'")
+@NamedQuery(name = "Product.getByCategory", query = "select new com.inn.cafe.wrapper.ProductWrapper(u.id , u.name , u.description , u.price , u.category.id , u.category.name , u.status, u.imageUrl) from Product u where u.category.id=:id and u.status='true'")
 
-@NamedQuery(name = "Product.getProductById", query = "select new com.inn.cafe.wrapper.ProductWrapper(u.id , u.name , u.description , u.price) from Product u where u.id=:id")
+@NamedQuery(name = "Product.getProductById", query = "select new com.inn.cafe.wrapper.ProductWrapper(u.id , u.name , u.description , u.price, u.imageUrl) from Product u where u.id=:id")
 
 @Data
 @Entity
@@ -44,6 +44,9 @@ public class Product implements Serializable {
 
     @Column(name = "status")
     private String status;
+
+    @Column(name = "image_url")
+    private String imageUrl;
 
 
     public Product() {
@@ -98,6 +101,14 @@ public class Product implements Serializable {
         this.status = status;
     }
 
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
     @Override
     public String toString() {
         return "Product{" +
@@ -107,6 +118,7 @@ public class Product implements Serializable {
                 ", description='" + description + '\'' +
                 ", price=" + price +
                 ", status='" + status + '\'' +
+                ", imageUrl='" + imageUrl + '\'' +
                 '}';
     }
 }

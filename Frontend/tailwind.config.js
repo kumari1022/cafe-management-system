@@ -5,12 +5,32 @@ export default {
   theme: {
     extend: {
       colors: {
-        brand: {
-          50: "#f7f8ff",
-          100: "#eef0ff",
-          500: "#7c83ff",
-          600: "#6366f1",
+        cafe: {
+          bg: "#f8f5f2",
+          sidebar: "#ede0d4",
+          primary: "#9c6644",
+          secondary: "#b08968",
+          btn: "#7f5539",
+          hover: "#ddb892",
+          card: "#fffaf5",
+          text: "#3e2723",
+          beige: "#f5f5dc",
+          cream: "#fffdd0",
+          dark: {
+            bg: "#1a120b",
+            sidebar: "#2c1810",
+            card: "#3e2723",
+            text: "#f8f5f2",
+          },
         },
+      },
+      fontFamily: {
+        display: ["Poppins", "Georgia", "Cambria", "serif"],
+        sans: ["Poppins", "Inter", "Segoe UI", "system-ui", "sans-serif"],
+      },
+      boxShadow: {
+        cafe: "0 10px 30px rgba(62, 39, 35, 0.08)",
+        "cafe-lg": "0 20px 50px rgba(62, 39, 35, 0.12)",
       },
     },
   },

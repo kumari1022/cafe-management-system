@@ -21,15 +21,12 @@ public class UserRestImpl implements UserRest {
     UserService userService;
 
     @Override
-    public ResponseEntity<String> signUp(Map<String, String> requestMap) {
-
+    public ResponseEntity<String> signup(Map<String, String> requestMap) {
         try {
-            //System.out.println("inside userRestImpl");
-            return userService.signUp(requestMap);
+            return userService.signup(requestMap);
         } catch (Exception ex) {
             ex.printStackTrace();
         }
-        //System.out.println("Before return");
         return CafeUtils.getResponeEntity(CafeConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
@@ -44,22 +41,39 @@ public class UserRestImpl implements UserRest {
     }
 
     @Override
-    public ResponseEntity<List<UserWrapper>> getAllUser() {
+    public ResponseEntity<List<UserWrapper>> getAllStaff() {
         try {
-            return userService.getAllUser();
+            return userService.getAllStaff();
         } catch (Exception ex) {
             ex.printStackTrace();
         }
-        return new ResponseEntity<List<UserWrapper>>(new ArrayList<>(), HttpStatus.INTERNAL_SERVER_ERROR);
+        return new ResponseEntity<>(new ArrayList<>(), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-
+    @Override
+    public ResponseEntity<String> addStaff(Map<String, String> requestMap) {
+        try {
+            return userService.addStaff(requestMap);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return CafeUtils.getResponeEntity(CafeConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
 
     @Override
-    public ResponseEntity<String> update(Map<String, String> requestMap) {
-
+    public ResponseEntity<String> updateStaff(Map<String, String> requestMap) {
         try {
-            return userService.update(requestMap);
+            return userService.updateStaff(requestMap);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return CafeUtils.getResponeEntity(CafeConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @Override
+    public ResponseEntity<String> deleteStaff(Integer id) {
+        try {
+            return userService.deleteStaff(id);
         } catch (Exception ex) {
             ex.printStackTrace();
         }

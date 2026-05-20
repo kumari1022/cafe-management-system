@@ -13,15 +13,19 @@ import com.inn.cafe.utils.EmailUtil;
 import com.inn.cafe.wrapper.UserWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.neo4j.Neo4jProperties;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -32,94 +36,86 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     AuthenticationManager authenticationManager;
+
     @Autowired
     jwtUtil jwtUtil;
 
     @Autowired
     JwtFilter jwtFilter;
+
     @Autowired
     CustomerUserDetailsService customerUserDetailsService;
 
     @Autowired
     EmailUtil emailUtil;
 
+    @Autowired
+    PasswordEncoder passwordEncoder;
+
     @Override
-    public ResponseEntity<String> signUp(Map<String, String> requestMap) {
+    public ResponseEntity<String> signup(Map<String, String> requestMap) {
         log.info("Inside signup {}", requestMap);
         try {
-            if (validaSignUpMap(requestMap)) {
-                //System.out.println("inside validaSignUpMap");
+            if (validateSignUpMap(requestMap)) {
                 User user = userDao.findByEmailId(requestMap.get("email"));
                 if (Objects.isNull(user)) {
-                    userDao.save(getUserFromMap(requestMap));
-                    //System.out.println("Successfully  Registered.");
-                    return CafeUtils.getResponeEntity("Successfully  Registered.", HttpStatus.OK);
+                    User newUser = new User();
+                    newUser.setName(requestMap.get("name"));
+                    newUser.setEmail(requestMap.get("email"));
+                    newUser.setContactNumber(requestMap.get("contactNumber"));
+                    newUser.setPassword(passwordEncoder.encode(requestMap.get("password")));
+                    newUser.setRole("user");
+                    newUser.setStatus("true");
+                    userDao.save(newUser);
+                    return CafeUtils.getResponeEntity("Successfully Registered.", HttpStatus.OK);
                 } else {
-                    //System.out.println("Email already exits.");
-                    return CafeUtils.getResponeEntity("Email already exits.", HttpStatus.BAD_REQUEST);
+                    return CafeUtils.getResponeEntity("Email already exists.", HttpStatus.BAD_REQUEST);
                 }
             } else {
-                //System.out.println(CafeConstants.INVALID_DATA);
                 return CafeUtils.getResponeEntity(CafeConstants.INVALID_DATA, HttpStatus.BAD_REQUEST);
             }
         } catch (Exception ex) {
             ex.printStackTrace();
         }
-        //System.out.println(CafeConstants.SOMETHING_WENT_WRONG);
         return CafeUtils.getResponeEntity(CafeConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    private boolean validateSignUpMap(Map<String, String> requestMap) {
+        return requestMap.containsKey("name") && requestMap.containsKey("contactNumber")
+                && requestMap.containsKey("email") && requestMap.containsKey("password");
     }
 
     @Override
     public ResponseEntity<String> login(Map<String, String> requestMap) {
         log.info("Inside login {}", requestMap);
         try {
-            Authentication auth = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(requestMap.get("email"), requestMap.get("password")));
+            Authentication auth = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(requestMap.get("email"), requestMap.get("password")));
             if (auth.isAuthenticated()) {
-                if (customerUserDetailsService.getUserDatails().getStatus().equalsIgnoreCase("true") || 
-                    customerUserDetailsService.getUserDatails().getStatus().equalsIgnoreCase("active")) {
-                    return new ResponseEntity<String>("{\"token\":\"" + jwtUtil.generateToken(
-                            customerUserDetailsService.getUserDatails().getEmail(), customerUserDetailsService.getUserDatails().getRole()) + "\"}",
+                User user = customerUserDetailsService.getUserDatails();
+                String status = user.getStatus() == null ? "" : user.getStatus().toLowerCase();
+                if (status.equals("true") || status.equals("active")) {
+                    String role = user.getRole() == null ? "staff" : user.getRole().toLowerCase();
+                    String token = jwtUtil.generateToken(user.getEmail(), role);
+                    return new ResponseEntity<>(
+                            "{\"token\":\"" + token + "\",\"role\":\"" + role + "\"}",
                             HttpStatus.OK);
-                } else {
-                    return new ResponseEntity<String>("{\"message\":\"" + "Wait for Admin Approvel." + "\"}",
-                            HttpStatus.BAD_REQUEST);
                 }
+                return new ResponseEntity<>("{\"message\":\"Account is inactive. Contact admin.\"}", HttpStatus.BAD_REQUEST);
             }
         } catch (Exception ex) {
-            log.error("{}", ex);
+            log.error("Login failed", ex);
         }
-        return new ResponseEntity<String>("{\"message\":\"" + "Bad Credentials." + "\"}",
-                HttpStatus.BAD_REQUEST);
-    }
-
-
-    private boolean validaSignUpMap(Map<String, String> requestMap) {
-        if (requestMap.containsKey("name") && requestMap.containsKey("contactNumber") && requestMap.containsKey("email") && requestMap.containsKey("password")) {
-            return true;
-        }
-        return false;
-    }
-
-    private User getUserFromMap(Map<String, String> requestMap) {
-        User user = new User();
-        user.setName(requestMap.get("name"));
-        user.setContactNumber(requestMap.get("contactNumber"));
-        user.setEmail(requestMap.get("email"));
-        user.setPassword(requestMap.get("password"));
-        user.setStatus("active");
-        user.setRole("user");
-        return user;
+        return new ResponseEntity<>("{\"message\":\"Bad Credentials.\"}", HttpStatus.BAD_REQUEST);
     }
 
     @Override
-    public ResponseEntity<List<UserWrapper>> getAllUser() {
+    public ResponseEntity<List<UserWrapper>> getAllStaff() {
         try {
             if (jwtFilter.isAdmin()) {
-                return new ResponseEntity<>(userDao.getAllUser(), HttpStatus.OK);
-            } else {
-                return new ResponseEntity<>(new ArrayList<>(), HttpStatus.UNAUTHORIZED);
+                return new ResponseEntity<>(userDao.getAllStaff(), HttpStatus.OK);
             }
-
+            return new ResponseEntity<>(new ArrayList<>(), HttpStatus.UNAUTHORIZED);
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -127,22 +123,78 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public ResponseEntity<String> update(Map<String, String> requestMap) {
+    public ResponseEntity<String> addStaff(Map<String, String> requestMap) {
         try {
-            if (jwtFilter.isAdmin()) {
-                Optional<User> optional = userDao.findById(Integer.parseInt(requestMap.get("id")));
-                if (!optional.isEmpty()) {
-
-                    userDao.updateStatus(requestMap.get("status"), Integer.parseInt(requestMap.get("id")));
-                    sendMailToAllAdmin(requestMap.get("status"), optional.get().getEmail(), userDao.getAllAdmin());
-                    return CafeUtils.getResponeEntity("User Status is updated Successfully", HttpStatus.OK);
-
-                } else {
-                    return CafeUtils.getResponeEntity("User id doesn't exist", HttpStatus.OK);
-                }
-            } else {
+            if (!jwtFilter.isAdmin()) {
                 return CafeUtils.getResponeEntity(CafeConstants.UNAUTHORIZED_ACCESS, HttpStatus.UNAUTHORIZED);
             }
+            if (!validateStaffMap(requestMap, false)) {
+                return CafeUtils.getResponeEntity(CafeConstants.INVALID_DATA, HttpStatus.BAD_REQUEST);
+            }
+            if (userDao.findByEmailId(requestMap.get("email")) != null) {
+                return CafeUtils.getResponeEntity("Email already exists.", HttpStatus.BAD_REQUEST);
+            }
+            User staff = new User();
+            staff.setName(requestMap.get("name"));
+            staff.setEmail(requestMap.get("email"));
+            staff.setContactNumber(requestMap.get("contactNumber"));
+            staff.setPassword(passwordEncoder.encode(requestMap.get("password")));
+            staff.setRole("staff");
+            staff.setStatus("active");
+            userDao.save(staff);
+            return CafeUtils.getResponeEntity("Staff added successfully.", HttpStatus.OK);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return CafeUtils.getResponeEntity(CafeConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @Override
+    public ResponseEntity<String> updateStaff(Map<String, String> requestMap) {
+        try {
+            if (!jwtFilter.isAdmin()) {
+                return CafeUtils.getResponeEntity(CafeConstants.UNAUTHORIZED_ACCESS, HttpStatus.UNAUTHORIZED);
+            }
+            if (!requestMap.containsKey("id")) {
+                return CafeUtils.getResponeEntity(CafeConstants.INVALID_DATA, HttpStatus.BAD_REQUEST);
+            }
+            Optional<User> optional = userDao.findById(Integer.parseInt(requestMap.get("id")));
+            if (optional.isEmpty() || !"staff".equalsIgnoreCase(optional.get().getRole())) {
+                return CafeUtils.getResponeEntity("Staff not found.", HttpStatus.BAD_REQUEST);
+            }
+            User staff = optional.get();
+            if (requestMap.containsKey("name")) {
+                staff.setName(requestMap.get("name"));
+            }
+            if (requestMap.containsKey("contactNumber")) {
+                staff.setContactNumber(requestMap.get("contactNumber"));
+            }
+            if (requestMap.containsKey("status")) {
+                staff.setStatus(requestMap.get("status"));
+            }
+            if (requestMap.containsKey("password") && !Strings.isNullOrEmpty(requestMap.get("password"))) {
+                staff.setPassword(passwordEncoder.encode(requestMap.get("password")));
+            }
+            userDao.save(staff);
+            return CafeUtils.getResponeEntity("Staff updated successfully.", HttpStatus.OK);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return CafeUtils.getResponeEntity(CafeConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @Override
+    public ResponseEntity<String> deleteStaff(Integer id) {
+        try {
+            if (!jwtFilter.isAdmin()) {
+                return CafeUtils.getResponeEntity(CafeConstants.UNAUTHORIZED_ACCESS, HttpStatus.UNAUTHORIZED);
+            }
+            Optional<User> optional = userDao.findById(id);
+            if (optional.isEmpty() || !"staff".equalsIgnoreCase(optional.get().getRole())) {
+                return CafeUtils.getResponeEntity("Staff not found.", HttpStatus.BAD_REQUEST);
+            }
+            userDao.deleteById(id);
+            return CafeUtils.getResponeEntity("Staff deleted successfully.", HttpStatus.OK);
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -157,16 +209,20 @@ public class UserServiceImpl implements UserService {
     @Override
     public ResponseEntity<String> changePassword(Map<String, String> requestMap) {
         try {
-            User user = userDao.findByEmail(jwtFilter.getCurrentUsername());
-            if (!user.equals(null)) {
-                if (user.getPassword().equals(requestMap.get("oldPassword"))) {
-                    user.setPassword(requestMap.get("newPassword"));
-                    userDao.save(user);
-                    return CafeUtils.getResponeEntity("Password Updated Successfully", HttpStatus.OK);
-                }
-                return CafeUtils.getResponeEntity("Incorrect Old Password", HttpStatus.BAD_REQUEST);
+            String email = jwtFilter.getCurrentUsername();
+            if (email == null) {
+                return CafeUtils.getResponeEntity(CafeConstants.UNAUTHORIZED_ACCESS, HttpStatus.UNAUTHORIZED);
             }
-            return CafeUtils.getResponeEntity(CafeConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
+            User user = userDao.findByEmail(email);
+            if (user == null) {
+                return CafeUtils.getResponeEntity(CafeConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+            if (!passwordEncoder.matches(requestMap.get("oldPassword"), user.getPassword())) {
+                return CafeUtils.getResponeEntity("Incorrect old password.", HttpStatus.BAD_REQUEST);
+            }
+            user.setPassword(passwordEncoder.encode(requestMap.get("newPassword")));
+            userDao.save(user);
+            return CafeUtils.getResponeEntity("Password updated successfully.", HttpStatus.OK);
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -175,31 +231,25 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public ResponseEntity<String> forgetPassword(Map<String, String> requestMap) {
-        System.out.println("inside the forgot password function");
         try {
             User user = userDao.findByEmail(requestMap.get("email"));
-            System.out.println("user email is : " + user.getEmail());
             if (!Objects.isNull(user) && !Strings.isNullOrEmpty(user.getEmail())) {
-                //System.out.println("11");
-                emailUtil.forgetMail(user.getEmail() , "Credentials by Cafe Management System" , user.getPassword());
-                return CafeUtils.getResponeEntity("Check Your mail for Credentials", HttpStatus.OK);
+                emailUtil.forgetMail(user.getEmail(), "Password reset", "Contact admin to reset your password.");
+                return CafeUtils.getResponeEntity("Check your email for instructions.", HttpStatus.OK);
             }
-
         } catch (Exception ex) {
             ex.printStackTrace();
         }
         return CafeUtils.getResponeEntity(CafeConstants.SOMETHING_WENT_WRONG, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-
-    private void sendMailToAllAdmin(String status, String user, List<String> allAdmin) {
-        allAdmin.remove(jwtFilter.getCurrentUsername());
-        if (status != null && status.equalsIgnoreCase("true")) {
-            emailUtil.SendSimpleMessage(jwtFilter.getCurrentUsername(), "Account Approved", "USER:- " + user + "\n is approved by\nADMIN:-" + jwtFilter.getCurrentUsername(), allAdmin);
-        } else {
-            emailUtil.SendSimpleMessage(jwtFilter.getCurrentUsername(), "Account Disabled", "USER:- " + user + "\n is disabled by\nADMIN:-" + jwtFilter.getCurrentUsername(), allAdmin);
-
+    private boolean validateStaffMap(Map<String, String> requestMap, boolean isUpdate) {
+        if (!isUpdate) {
+            return requestMap.containsKey("name")
+                    && requestMap.containsKey("email")
+                    && requestMap.containsKey("contactNumber")
+                    && requestMap.containsKey("password");
         }
+        return requestMap.containsKey("id");
     }
-
 }

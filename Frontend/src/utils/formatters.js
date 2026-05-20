@@ -1,3 +1,15 @@
+export function parseApiPayload(data) {
+  if (data == null) return null;
+  if (typeof data === "string") {
+    try {
+      return JSON.parse(data);
+    } catch {
+      return { uuid: data };
+    }
+  }
+  return data;
+}
+
 export function formatCurrency(value) {
   return `Rs ${Number(value || 0).toFixed(2)}`;
 }

@@ -13,8 +13,9 @@ public class ProductWrapper {
     String status;
     Integer categoryId;
     String categoryName;
+    String imageUrl;
 
-    public ProductWrapper(Integer id, String name , String description , Integer price , Integer categoryId , String categoryName , String status ) {
+    public ProductWrapper(Integer id, String name , String description , Integer price , Integer categoryId , String categoryName , String status, String imageUrl ) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -22,6 +23,7 @@ public class ProductWrapper {
         this.categoryId = categoryId;
         this.categoryName = categoryName;
         this.status = status;
+        this.imageUrl = imageUrl;
     }
 
     public ProductWrapper(Integer id, String name) {
@@ -29,10 +31,11 @@ public class ProductWrapper {
         this.name = name;
     }
 
-    public ProductWrapper(Integer id, String name, String description, Integer price) {
+    public ProductWrapper(Integer id, String name, String description, Integer price, String imageUrl) {
         this.id = id;
         this.name = name;
         this.description = description;
         this.price = price;
+        this.imageUrl = imageUrl;
     }
 }

@@ -47,6 +47,9 @@ public class productServiceImpl implements productService {
     public ResponseEntity<String> addNewProduct(Map<String, String> requestMap) {
         log.info("Inside addNewProduct{}", requestMap);
         try {
+            if (!jwtFilter.isAdmin()) {
+                return CafeUtils.getResponeEntity(CafeConstants.UNAUTHORIZED_ACCESS, HttpStatus.UNAUTHORIZED);
+            }
             if (validateProductMap(requestMap, false)) {
                 productDao.save(getProductFromMap(requestMap, false));
                 return CafeUtils.getResponeEntity("Product Added Successfully", HttpStatus.OK);
@@ -72,6 +75,9 @@ public class productServiceImpl implements productService {
     @Override
     public ResponseEntity<String> update(Map<String, String> requestMap) {
         try {
+            if (!jwtFilter.isAdmin()) {
+                return CafeUtils.getResponeEntity(CafeConstants.UNAUTHORIZED_ACCESS, HttpStatus.UNAUTHORIZED);
+            }
             if (validateProductMap(requestMap, true)) {
                 Optional<Product> optional = productDao.findById(Integer.parseInt(requestMap.get("id")));
                 if (!optional.isEmpty()) {
@@ -93,6 +99,9 @@ public class productServiceImpl implements productService {
     @Override
     public ResponseEntity<String> delete(Integer id) {
         try {
+            if (!jwtFilter.isAdmin()) {
+                return CafeUtils.getResponeEntity(CafeConstants.UNAUTHORIZED_ACCESS, HttpStatus.UNAUTHORIZED);
+            }
             Optional optional = productDao.findById(id);
             if (!optional.isEmpty()) {
                 productDao.deleteById(id);
@@ -171,6 +180,9 @@ public class productServiceImpl implements productService {
         product.setName(requestMap.get("name"));
         product.setDescription(requestMap.get("description"));
         product.setPrice(Integer.parseInt(requestMap.get("price")));
+        if (requestMap.containsKey("imageUrl")) {
+            product.setImageUrl(requestMap.get("imageUrl"));
+        }
 
         return product;
     }

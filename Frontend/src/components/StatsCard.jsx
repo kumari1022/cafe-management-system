@@ -1,15 +1,23 @@
-export default function StatsCard({ title, value, icon: Icon, color = "bg-brand-100" }) {
+import { motion } from "framer-motion";
+
+export default function StatsCard({ title, value, icon, delay = 0 }) {
   return (
-    <div className="card p-4">
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay }}
+      whileHover={{ scale: 1.03, y: -2 }}
+      className="cafe-card p-5"
+    >
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-slate-500">{title}</p>
-          <p className="text-2xl font-semibold text-slate-800">{value}</p>
+          <p className="text-sm text-cafe-secondary">{title}</p>
+          <p className="mt-1 text-3xl font-bold text-cafe-text dark:text-cafe-dark-text">{value}</p>
         </div>
-        <div className={`rounded-xl ${color} p-2`}>
-          <Icon className="h-5 w-5 text-slate-700" />
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cafe-sidebar text-2xl dark:bg-cafe-dark-sidebar">
+          {icon}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
